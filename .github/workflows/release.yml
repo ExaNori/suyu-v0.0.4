@@ -93,7 +93,7 @@ jobs:
             libwayland-dev libwayland-egl1 wayland-protocols libdecor-0-dev \
             libegl-dev libdrm-dev libgbm-dev \
             nasm autoconf pkg-config libva-dev libvdpau-dev \
-            libboost-all-dev
+            libboost-all-dev file
       - name: Configure
         run: |
           cmake --version
@@ -147,10 +147,25 @@ jobs:
             -bundle-non-qt-libs -no-translations -unsupported-allow-new-glibc -verbose=2
 
           tar -czf suyu-linux-x64.tar.gz -C _pkg .
+
+          # Also package the same AppDir as a single-file AppImage for convenience. Running an
+          # AppImage directly needs FUSE (libfuse2), which some distros - Fedora among them -
+          # don't ship by default; the tarball above stays as a guaranteed-to-work fallback for
+          # that case (or use `./suyu-linux-x64.AppImage --appimage-extract-and-run`, which
+          # doesn't need FUSE either).
+          wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool.AppImage
+          chmod +x appimagetool.AppImage
+          rm -rf squashfs-root
+          ./appimagetool.AppImage --appimage-extract
+          # Pre-fetch the runtime instead of letting appimagetool download it mid-build.
+          wget -q https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64 -O runtime-x86_64
+          ARCH=x86_64 ./squashfs-root/AppRun --runtime-file runtime-x86_64 _pkg suyu-linux-x64.AppImage
       - uses: actions/upload-artifact@v4
         with:
           name: linux
-          path: suyu-linux-x64.tar.gz
+          path: |
+            suyu-linux-x64.tar.gz
+            suyu-linux-x64.AppImage
 
   build-macos:
     name: macOS
