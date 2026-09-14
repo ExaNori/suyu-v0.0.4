@@ -278,7 +278,6 @@ else()
                 --enable-pic
                 --cc=${FFmpeg_CC}
                 --cxx=${FFmpeg_CXX}
-                --ld=${CMAKE_LINKER}
                 --extra-cflags=${CMAKE_C_FLAGS}
                 --extra-cxxflags=${CMAKE_CXX_FLAGS}
                 --extra-ldflags=${CMAKE_C_LINK_FLAGS}
