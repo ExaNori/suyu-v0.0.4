@@ -114,9 +114,38 @@ jobs:
         run: cmake --build build --target suyu suyu-cmd -j4
       - name: Package
         run: |
-          rm -rf _pkg && mkdir _pkg
+          # Flat AppDir layout (binary/desktop-file/icon all next to each other) rather than
+          # a usr/bin,usr/share tree: linuxdeployqt auto-switches to a stricter "FHS-like" mode
+          # for the latter that expects a real system root and silently exits otherwise.
+          rm -rf _pkg && mkdir -p _pkg
           cp build/bin/suyu _pkg/
           cp build/bin/suyu-cmd _pkg/ 2>/dev/null || true
+          cp dist/dev.suyu_emu.suyu.desktop _pkg/
+          cp dist/qt_themes/default/icons/256x256/suyu.png _pkg/dev.suyu_emu.suyu.png
+
+          # Bundle Qt (and its own risky transitive deps like ICU/glib/pcre, whose sonames are
+          # just as version-locked as FFmpeg's/Boost's) next to the binary with linuxdeployqt,
+          # instead of relying on the target distro's system Qt6: Ubuntu's Qt6 packages and
+          # Fedora's can differ enough in practice that we'd rather ship a known-good Qt than
+          # assume compatibility. It patches RUNPATH to $ORIGIN-relative paths and writes a
+          # qt.conf, so _pkg/suyu keeps working when the tarball is extracted anywhere and run
+          # directly (no AppImage runtime/FUSE needed for this, and no system Qt needed either).
+          #
+          # linuxdeployqt also unconditionally collects each bundled library's copyright file
+          # starting from usr/share/doc/libc6/copyright *relative to the AppDir*, and silently
+          # exits(1) with no error message if that doesn't exist - create it as a marker first.
+          mkdir -p _pkg/usr/share/doc/libc6
+          cp /usr/share/doc/libc6/copyright _pkg/usr/share/doc/libc6/copyright
+
+          # Pinned to release 11 (not the "continuous" tag) for reproducibility.
+          wget -q https://github.com/probonopd/linuxdeployqt/releases/download/11/linuxdeployqt-continuous-x86_64.AppImage -O linuxdeployqt.AppImage
+          chmod +x linuxdeployqt.AppImage
+          ./linuxdeployqt.AppImage --appimage-extract
+          ./squashfs-root/AppRun _pkg/dev.suyu_emu.suyu.desktop \
+            -qmake=/usr/bin/qmake6 \
+            -executable=_pkg/suyu-cmd \
+            -bundle-non-qt-libs -no-translations -unsupported-allow-new-glibc -verbose=2
+
           tar -czf suyu-linux-x64.tar.gz -C _pkg .
       - uses: actions/upload-artifact@v4
         with:
