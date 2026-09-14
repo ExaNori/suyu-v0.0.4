@@ -4,8 +4,6 @@
 # SPDX-FileCopyrightText: 2021 yuzu Emulator Project
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-# TODO(crueter, MaranBr): Externals FFmpeg 8.0
-
 set(FFmpeg_HWACCEL_LIBRARIES)
 set(FFmpeg_HWACCEL_FLAGS)
 set(FFmpeg_HWACCEL_INCLUDE_DIRS)
@@ -250,6 +248,10 @@ else()
 
     find_program(BASH_PROGRAM bash REQUIRED)
 
+    # GNU make is called `gmake` on BSD/Solaris (where the system `make` is not GNU make),
+    # but is simply `make` on Linux. Look for either so this works cross-platform.
+    find_program(FFmpeg_MAKE_PROGRAM NAMES gmake make REQUIRED)
+
     # `configure` parameters builds only exactly what yuzu needs from FFmpeg
     # `--disable-vdpau` is needed to avoid linking issues
     set(FFmpeg_CC ${CMAKE_C_COMPILER_LAUNCHER}  ${CMAKE_C_COMPILER})
@@ -309,7 +311,7 @@ else()
         OUTPUT
             ${FFmpeg_BUILD_LIBRARIES}
         COMMAND
-            gmake ${FFmpeg_MAKE_ARGS}
+            ${FFmpeg_MAKE_PROGRAM} ${FFmpeg_MAKE_ARGS}
         WORKING_DIRECTORY
             ${FFmpeg_BUILD_DIR}
     )

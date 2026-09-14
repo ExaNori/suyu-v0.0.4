@@ -92,13 +92,17 @@ jobs:
             libxfixes-dev libxss-dev libxkbcommon-dev libxtst-dev \
             libwayland-dev libwayland-egl1 wayland-protocols libdecor-0-dev \
             libegl-dev libdrm-dev libgbm-dev \
-            libavcodec-dev libavfilter-dev libavutil-dev libswscale-dev \
+            nasm autoconf pkg-config libva-dev libvdpau-dev \
             libboost-all-dev
       - name: Configure
         run: |
           cmake --version
           set -o pipefail
-          cmake -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_QT=ON -DYUZU_USE_BUNDLED_QT=OFF -GNinja -DOPENSSL_ROOT_DIR=/usr 2>&1 | tee cmake_configure.log
+          # Build FFmpeg statically from source (-DYUZU_USE_EXTERNAL_FFMPEG=ON) instead of
+          # linking Ubuntu's system FFmpeg: a binary dynamically linked against Ubuntu's
+          # libavcodec/libavutil/etc. sonames won't run on other distros (e.g. Fedora) that
+          # ship different FFmpeg versions with incompatible sonames.
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_QT=ON -DYUZU_USE_BUNDLED_QT=OFF -DYUZU_USE_EXTERNAL_FFMPEG=ON -GNinja -DOPENSSL_ROOT_DIR=/usr 2>&1 | tee cmake_configure.log
       - name: Upload cmake log
         if: failure()
         uses: actions/upload-artifact@v4
