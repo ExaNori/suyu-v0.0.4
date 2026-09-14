@@ -29,11 +29,13 @@ if (NOT YUZU_USE_BUNDLED_FFMPEG)
             --extra-ldflags="-nostdlib"
         )
         set(FFmpeg_IS_CROSS_COMPILING TRUE)
-    # User attempts to do a FFmpeg cross compilation because...
-    # Here we just quickly test against host/system processors not matching
-    # TODO: Test for versions not matching as well?
-    elseif (NOT (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES CMAKE_SYSTEM_PROCESSOR
-    AND CMAKE_HOST_SYSTEM_NAME MATCHES CMAKE_SYSTEM_NAME))
+    # Use CMake's own authoritative cross-compiling flag rather than comparing
+    # CMAKE_HOST_SYSTEM_PROCESSOR/CMAKE_SYSTEM_PROCESSOR by hand: on some native Linux
+    # hosts (e.g. GitHub Actions' Ubuntu runners) CMAKE_HOST_SYSTEM_PROCESSOR comes back
+    # as "unknown" (from `uname -p`) while CMAKE_SYSTEM_PROCESSOR is correctly "x86_64",
+    # which made that comparison spuriously detect a native build as cross-compiling and
+    # pass FFmpeg's configure `--enable-cross-compile --sysroot=""`, breaking the build.
+    elseif (CMAKE_CROSSCOMPILING)
         string(TOLOWER "${CMAKE_SYSTEM_NAME}" FFmpeg_SYSTEM_NAME)
         if (FFmpeg_SYSTEM_NAME STREQUAL "openorbis" OR FFmpeg_SYSTEM_NAME STREQUAL "managarm")
             set(FFmpeg_SYSTEM_NAME "none")
